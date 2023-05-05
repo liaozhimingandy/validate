@@ -30,8 +30,13 @@ def verification(request):
     match sevice_code:
         #     检查申请单,状态更新
         case "S0041" | "S0042" | "S0061":
-            message = exchange(content.get("message", {}).get("EXAM_APPLY", {}))
-            serializer = ser.ExamApplySerializer(data=message)
+            # 病理检查状态,节点不同,需要单独处理
+            if 'EXAM_APPLY' in content.get("message", {}).keys():
+                message = exchange(content.get("message", {}).get("EXAM_APPLY", {}))
+                serializer = ser.ExamApplySerializer(data=message)
+            else:
+                message = exchange(content.get("message", {}).get("PATHOLOGY_APPLY", {}))
+                serializer = ser.PathologyApplySerializer(data=message)
             serializer.is_valid(raise_exception=True)
 
         case "S0023" | "S0024":
