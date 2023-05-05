@@ -1,0 +1,40 @@
+version: '3.7'
+
+services:
+  app:
+    image: ${IMAGE}
+#    for producation,转至配置文件中, ESB换成对应的工程名称
+#    command: gunicorn ESB.wsgi:application --workers 3 --bind :8000
+    command: ${COMMAND}
+#    for beta
+#    command: python manage.py runserver 0.0.0.0:80
+    # 生产环境中请使用自动重启; always
+    restart: unless-stopped
+#    for beta
+#    command: python manage.py runserver 0.0.0.0:8000
+    # ports:
+    #   - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - data_static:/opt/app/assets
+
+  web:
+      image: nginx:1.21.0
+      restart: unless-stopped
+      ports:
+        - "8000:80"
+      environment:
+        - TZ=Asia/Shanghai
+      volumes:
+        - ./config/default_nginx.conf:/etc/nginx/conf.d/default.conf
+        - data_nginx_log:/var/log/nginx
+        - data_static:/opt/app/static/
+
+volumes:
+  data_nginx_log:
+    driver: local
+  data_static:
+    driver: local
