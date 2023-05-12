@@ -360,7 +360,7 @@ class PathologyApplySerializer(BaseSerializer):
     PRESENT_HISTORY_DESC = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True,
                                                  label='现病史描述', help_text='现病史描述')
     DIAG_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
-                                               label='诊断日期时间', help_text='诊断日期时间')
+                                               label='诊断日期时间', help_text='诊断日期时间', allow_null=True)
     DIAG_CODE = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='疾病诊断编码',
                                       help_text='疾病诊断编码')
     DIAG_NAME = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='诊断名称',
@@ -394,13 +394,14 @@ class PathologyApplySerializer(BaseSerializer):
     CLINIC_EXAM_DESC = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='临床检查描述',
                                              help_text='临床检查描述')
     SURGERY_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
-                                                  label='手术/操作日期时间', help_text='手术/操作日期时间')
+                                                  label='手术/操作日期时间', help_text='手术/操作日期时间',
+                                                  allow_null=True)
     SURGERY_CODE = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='手术/操作代码',
                                          help_text='手术/操作代码')
     SURGERY_NAME = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='手术/操作名称',
                                          help_text='手术/操作名称')
     FIXATIVE_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
-                                                   label='固定时间', help_text='固定时间')
+                                                   label='固定时间', help_text='固定时间', allow_null=True)
     FIXATIVE_OPERA_ID = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='固定医师ID',
                                               help_text='固定医师ID')
     FIXATIVE_OPERA_NAME = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True,
@@ -420,7 +421,7 @@ class PathologyApplySerializer(BaseSerializer):
     COLLECT_METHOD_NAME = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True,
                                                 label='采集方式名称', help_text='采集方式名称')
     COLLECT_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
-                                                  label='采样日期时间', help_text='采样日期时间')
+                                                  label='采样日期时间', help_text='采样日期时间', allow_null=True)
     COLLECT_DEPT_ID = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='采样科室ID',
                                             help_text='采样科室ID')
     COLLECT_DEPT_NAME = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True,
@@ -430,13 +431,13 @@ class PathologyApplySerializer(BaseSerializer):
     COLLECT_OPERA_NAME = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True,
                                                label='采样医师姓名', help_text='采样医师姓名')
     DELIVERY_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
-                                                   label='送检日期时间', help_text='送检日期时间')
+                                                   label='送检日期时间', help_text='送检日期时间', allow_null=True)
     DELIVERY_OPERA_ID = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='送检人ID',
                                               help_text='送检人ID')
     DELIVERY_OPERA_NAME = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True,
                                                 label='送检医师姓名', help_text='送检医师姓名')
     RECEIVE_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
-                                                  label='接收日期时间', help_text='接收日期时间')
+                                                  label='接收日期时间', help_text='接收日期时间', allow_null=True)
     RECEIVE_OPERA_ID = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True, label='接收人ID',
                                              help_text='接收人ID')
     RECEIVE_OPERA_NAME = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True,
@@ -530,6 +531,14 @@ class PathologyApplySerializer(BaseSerializer):
             if any((attrs["CANCEL_OPERA_ID"], attrs["CANCEL_DATE_TIME"], attrs["CANCEL_OPERA_NAME"])):
                 message = "该申请单作废时,这些字段为空, CANCEL_OPERA_ID, CANCEL_OPERA_NAME, CANCEL_DATE_TIME"
                 raise serializers.ValidationError(message)
+
+        # 校验诊断时间,诊断信息
+        if not (all((attrs['DIAG_DATE_TIME'], attrs['DIAG_CODE'], attrs['DIAG_NAME'])) or
+                all([item is None for item in (attrs['DIAG_DATE_TIME'], attrs['DIAG_CODE'], attrs['DIAG_NAME'])])):
+            message = f"DIAG_DATE_TIME->{attrs['DIAG_DATE_TIME']},DIAG_CODE>{attrs['DIAG_CODE']}," \
+                      f"DIAG_NAME>{attrs['DIAG_NAME']}必须全部同时为空或同时存在值"
+            raise serializers.ValidationError(message)
+
         return attrs
 
 
