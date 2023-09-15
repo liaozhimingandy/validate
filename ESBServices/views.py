@@ -57,6 +57,12 @@ def verification(request):
             serializer = ser.ExamResultSerializer(data=message)
             serializer.is_valid(raise_exception=True)
 
+        case "S0074" | "S0075":
+            #  病理结果
+            message = exchange(content.get("message", {}).get("PATHOLOGY_RESULT", {}))
+            serializer = ser.PathologyResultSerializer(data=message)
+            serializer.is_valid(raise_exception=True)
+
         case _:
             message = "本消息暂时未参与校验"
 

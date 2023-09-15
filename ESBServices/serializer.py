@@ -56,6 +56,32 @@ list_REGISTER_CLINIC_TYPE_CODE = (
     (5, '体检'),
 )
 
+# 病理报告单状态
+list_PATHOLOGY_TYPE_CODE = (
+    ('RFP', '快速冰冻病理报告'),
+    ('NOR', '常规病理报告'),
+    ('ADD', '补充报告'),
+    ('REV', '修正报告'),
+)
+
+# 报告单状态代码
+list_REPORT_STATUS_CODE = (
+    ('N', '未写报告'),
+    ('I', '已有图像'),
+    ('R', '已录入'),
+    ('V', '已审核'),
+    ('S', '已发布'),
+)
+
+# 就诊类型
+list_ENCOUNTER_TYPE_CODE = (
+    ('1', '门诊'),
+    ('2', '急诊'),
+    ('3', '住院'),
+    ('4', '体检'),
+    ('9', '其他')
+)
+
 
 class BaseSerializer(serializers.Serializer):
     """公共部分"""
@@ -66,8 +92,8 @@ class BaseSerializer(serializers.Serializer):
     ENCOUNTER_ID = serializers.CharField(max_length=64, trim_whitespace=True)
     ORG_CODE = serializers.CharField(max_length=18, allow_blank=True)
     ORG_NAME = serializers.CharField(max_length=32, trim_whitespace=True)
-    ENCOUNTER_TYPE_CODE = serializers.CharField(max_length=32, trim_whitespace=True)
-    ENCOUNTER_TYPE_NAME = serializers.CharField(max_length=32, trim_whitespace=True)
+    ENCOUNTER_TYPE_CODE = serializers.ChoiceField(list_ENCOUNTER_TYPE_CODE, help_text='就诊类别代码', label='就诊类别代码')
+    ENCOUNTER_TYPE_NAME = serializers.CharField(max_length=32, trim_whitespace=True, help_text='就诊类别名称', label='就诊类别名称')
     VISIT_ID = serializers.CharField(max_length=64, trim_whitespace=True)
     VISIT_NO = serializers.IntegerField(default=1, allow_null=True)
     PATIENT_NAME = serializers.CharField(max_length=32, trim_whitespace=True)
@@ -214,19 +240,19 @@ class ExamApplySerializer(BaseSerializer):
             raise serializers.ValidationError(message)
         return value
 
-    def validate(self, attr):
+    def validate(self, attrs):
         """其它校验"""
         # 如果作废,则取消时间等不能为空
-        if all((attr["CANCEL_DATE_TIME"], attr["CANCEL_OPERA_ID"], attr["CANCEL_OPERA_NAME"],
-                False if attr["CANCEL_FLAG"] else True)):
+        if all((attrs["CANCEL_DATE_TIME"], attrs["CANCEL_OPERA_ID"], attrs["CANCEL_OPERA_NAME"],
+                False if attrs["CANCEL_FLAG"] else True)):
             message = "该申请单作废时,这些字段不能为空, CANCEL_DATE_TIME, EXEC_OPERA_ID, CANCEL_OPERA_NAME, CANCEL_FLAG"
             raise serializers.ValidationError(message)
         # 校验检查申请单状态,如果执行时间不为空,则执行相关字段必须不为空
-        if len(attr['EXEC_DATE_TIME']) > 0:
-            if len(attr['EXEC_OPERA_ID']) == 0 or len(attr['EXEC_OPERA_NAME']) == 0:
+        if len(attrs['EXEC_DATE_TIME']) > 0:
+            if len(attrs['EXEC_OPERA_ID']) == 0 or len(attrs['EXEC_OPERA_NAME']) == 0:
                 message = "作为检查申请单执行时的消息,你的EXEC_DATE_TIME, EXEC_OPERA_ID, EXEC_OPERA_NAME三项必须合法"
                 raise serializers.ValidationError(message)
-        return attr
+        return attrs
 
 
 class EncounterOutpatientSerializer(BaseSerializer):
@@ -314,18 +340,18 @@ class EncounterOutpatientSerializer(BaseSerializer):
     OUTPATIENT_ID = serializers.CharField(min_length=4, max_length=32, trim_whitespace=True, label='门急诊号标识',
                                           allow_null=True)
 
-    def validate(self, attr):
+    def validate(self, attrs):
         """其它校验"""
         # 如果作废,则取消时间等不能为空
-        if attr["RETURN_FLAG"]:
-            if not all((attr["RETURN_OPERA_ID"], attr["RETURN_DATE_TIME"], attr["RETURN_OPERA_NAME"])):
+        if attrs["RETURN_FLAG"]:
+            if not all((attrs["RETURN_OPERA_ID"], attrs["RETURN_DATE_TIME"], attrs["RETURN_OPERA_NAME"])):
                 message = "该申请单非作废时,这些字段不能为空, RETURN_OPERA_ID, RETURN_DATE_TIME, RETURN_OPERA_NAME"
                 raise serializers.ValidationError(message)
         else:
-            if any((attr["RETURN_OPERA_ID"], attr["RETURN_DATE_TIME"], attr["RETURN_OPERA_NAME"])):
+            if any((attrs["RETURN_OPERA_ID"], attrs["RETURN_DATE_TIME"], attrs["RETURN_OPERA_NAME"])):
                 message = "该申请单作废时,这些字段为空, RETURN_OPERA_ID, RETURN_DATE_TIME, RETURN_OPERA_NAME"
                 raise serializers.ValidationError(message)
-        return attr
+        return attrs
 
 
 class PathologyApplySerializer(BaseSerializer):
@@ -653,8 +679,7 @@ class ExamResultSerializer(BaseSerializer):
                                                  help_text='文书内容_PDF', allow_null=True)
     CA_HASH = serializers.CharField(max_length=1024, trim_whitespace=True, label='CA数字签名hash值',
                                     help_text='CA数字签名hash值', allow_null=True)
-    DOCUMENT_CONTENT_PDF_URL = serializers.CharField(max_length=32, trim_whitespace=True, label='文书PDF存放地址',
-                                                     help_text='文书PDF存放地址', allow_null=True)
+    DOCUMENT_CONTENT_PDF_URL = serializers.URLField(label='文书PDF存放地址', help_text='文书PDF存放地址', allow_null=True)
     AGE_MINUTE = serializers.IntegerField(max_value=100, label='年龄-分', help_text='年龄-分', allow_null=True)
     REPORT_TYPE = serializers.CharField(max_length=32, trim_whitespace=True, label='报告属性', help_text='报告属性',
                                         allow_null=True)
@@ -666,15 +691,155 @@ class ExamResultSerializer(BaseSerializer):
                                          help_text='住院号标识', allow_null=True)
 
     def validate_EXAM_RESULT_ID(self, value):
-        """PATHOLOGY_APPLY_ID"""
+        """EXAM_RESULT_ID"""
         if value.count("_") < 3:
             message = f"EXAM_RESULT_ID->({value}) 校验不通过;规则：院部代码_就诊类别代码_系统代码_检查报告号"
             raise serializers.ValidationError(message)
         return value
 
-    def validate(self, attr):
+    def validate(self, attrs):
         """其它校验"""
-        return attr
+        return attrs
+
+
+class PathologyResultSerializer(BaseSerializer):
+    VISIT_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
+                                                label='就诊日期时间', help_text='就诊日期时间')
+    DEPT_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='科室ID', help_text='科室ID', allow_null=True)
+    DEPT_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='科室名称', help_text='科室名称', allow_null=True)
+    WARD_ID = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='病区ID',
+                                    help_text='病区ID')
+    WARD_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='病区名称',
+                                      help_text='病区名称')
+    BED_NO = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='床号', help_text='床号')
+    PATHOLOGY_RESULT_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='病理报告ID', help_text='病理报告ID')
+    FILLER_ORDER_NO = serializers.CharField(max_length=64, trim_whitespace=True, label='报告单号', help_text='报告单号')
+    PATHOLOGY_APPLY_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='病理申请ID',
+                                               help_text='病理申请ID')
+    PATHOLOGY_APPLY_NO = serializers.CharField(max_length=64, trim_whitespace=True, label='病理申请单号', help_text='病理申请单号')
+    PLACER_ORDER_NO = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='医嘱号',
+                                            help_text='医嘱号')
+    APPLY_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",), label='申请日期时间',
+                                            help_text='申请日期时间')
+    APPLY_DEPT_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='申请科室ID',
+                                          help_text='申请科室ID')
+    APPLY_DEPT_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='申请科室名称',
+                                            help_text='申请科室名称')
+    APPLY_DOCTOR_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='申请医师ID', help_text='申请医师ID')
+    APPLY_DOCTOR_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='申请医师姓名', help_text='申请医师姓名')
+    DIAG_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",), label='诊断日期时间',
+                                           help_text='诊断日期时间')
+    DIAG_CODE = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='疾病诊断编码',
+                                      help_text='疾病诊断编码')
+    DIAG_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='诊断名称',
+                                      help_text='诊断名称')
+    DIAG_DESC = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='诊断描述',
+                                      help_text='诊断描述')
+    APPLY_PURPOSE_DESC = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
+                                               label='检查目的描述', help_text='检查目的描述')
+    PATHOLOGY_CATEGORY_CODE = serializers.ChoiceField(list_PATHOLOGY_TYPE_CODE, label='病理分类代码', help_text='病理分类代码')
+    PATHOLOGY_CATEGORY_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
+                                                    label='病理分类名称', help_text='病理分类名称')
+    UNIVERSAL_SERVICE_CODE = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
+                                                   label='医嘱项目代码', help_text='医嘱项目代码')
+    UNIVERSAL_SERVICE_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
+                                                   label='医嘱项目名称', help_text='医嘱项目名称')
+    BIOPSY_SITE_CODE = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='活检部位代码',
+                                             help_text='活检部位代码')
+    BIOPSY_SITE_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='活检部位名称',
+                                             help_text='活检部位名称')
+    GROSS_FINDING_DESC = serializers.CharField(max_length=1024, trim_whitespace=True, allow_null=True, label='肉眼所见',
+                                               help_text='肉眼所见')
+    MICROSCOPE_FINDING_DESC = serializers.CharField(max_length=1024, trim_whitespace=True, allow_null=True,
+                                                    label='镜下所见', help_text='镜下所见')
+    PATHOLOGY_DIAG_DESC = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='病理诊断',
+                                                help_text='病理诊断')
+    PATHOLOGY_NO = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='病理号',
+                                         help_text='病理号')
+    REPORT_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
+                                                 label='报告日期时间', help_text='报告日期时间')
+    REPORT_OPERA_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='报告人ID',
+                                            help_text='报告人ID')
+    REPORT_OPERA_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='报告医师姓名',
+                                              help_text='报告医师姓名')
+    REVIEW_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
+                                                 label='复审日期时间', help_text='复审日期时间')
+    REVIEW_OPERA_ID = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='复审人ID',
+                                            help_text='复审人ID')
+    REVIEW_OPERA_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='复审人姓名',
+                                              help_text='复审人姓名')
+    REPORT_STATUS_CODE = serializers.ChoiceField(list_REPORT_STATUS_CODE, label='报告单状态代码', help_text='报告单状态代码')
+    REPORT_STATUS_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
+                                               label='报告单状态名称', help_text='报告单状态名称')
+    SURGERY_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
+                                              label='手术/操作日期时间', help_text='手术/操作日期时间')
+    SURGERY_CODE = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='手术/操作代码',
+                                         help_text='手术/操作代码')
+    SURGERY_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='手术/操作名称',
+                                         help_text='手术/操作名称')
+    FROZEN_NO = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='病理冰冻号',
+                                      help_text='病理冰冻号')
+    SPECIAL_EXAM_NO = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='特检医嘱号',
+                                            help_text='特检医嘱号')
+    WARN_FLAG = serializers.ChoiceField(choices=(0, 1), label='危急值标识', help_text='危急值标识')
+    DOCUMENT_CONTENT_PDF = serializers.CharField(max_length=32, trim_whitespace=True, allow_null=True,
+                                                 label='文书内容_PDF', help_text='文书内容_PDF')
+    CA_HASH = serializers.CharField(max_length=128, trim_whitespace=True, allow_null=True, label='CA数字签名hash值',
+                                    help_text='CA数字签名hash值')
+    DOCUMENT_CONTENT_PDF_URL = serializers.URLField(max_length=200, label='病历文书PDF路径', help_text='病历文书PDF路径')
+    PATHOLOGY_TYPE_CODE = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
+                                                label='病理类型代码', help_text='病理类型代码')
+    PATHOLOGY_TYPE_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
+                                                label='病理类型名称', help_text='病理类型名称')
+    FIRST_DIAG_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",), label='初诊日期',
+                                                 help_text='初诊日期')
+    FIRST_DIAG_OPERA_ID = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='初诊人ID',
+                                                help_text='初诊人ID')
+    FIRST_DIAG_OPERA_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
+                                                  label='初诊人姓名', help_text='初诊人姓名')
+    AGE_MINUTE = serializers.IntegerField(max_value=100, label='年龄-分', help_text='年龄-分', allow_null=True)
+    DOCUMENT_CONTENT_CDA = serializers.CharField(max_length=1024, trim_whitespace=True, allow_null=True,
+                                                 label='文书内容_CDA', help_text='文书内容_CDA')
+    OUTPATIENT_ID = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='门急诊号标识',
+                                          help_text='门急诊号标识')
+    INPATIENT_ID = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='住院号标识',
+                                         help_text='住院号标识')
+    FROM_SRC = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='数据来源系统',
+                                     help_text='数据来源系统')
+    COMMENT = serializers.CharField(max_length=128, trim_whitespace=True, allow_null=True, label='备注内容',
+                                    help_text='备注内容')
+    DEVICE_ID = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='设备唯一ID',
+                                      help_text='设备唯一ID')
+    DEVICE_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='设备名称',
+                                        help_text='设备名称')
+    REPORT_DEPT_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='报告科室ID',
+                                           help_text='报告科室ID')
+    REPORT_DEPT_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='报告科室名称',
+                                             help_text='报告科室名称')
+
+    def validate_PATHOLOGY_APPLY_ID(self, value):
+        """PATHOLOGY_APPLY_ID"""
+        if value.count("_") < 3:
+            message = f"PATHOLOGY_APPLY_ID->({value}) 校验不通过;规则：院部代码_就诊类别代码_系统代码_病理申请单号"
+            raise serializers.ValidationError(message)
+        return value
+
+    def validate_PATHOLOGY_RESULT_ID(self, value):
+        """PATHOLOGY_RESULT_ID"""
+        if value.count("_") < 3:
+            message = f"PATHOLOGY_RESULT_ID->({value}) 校验不通过;规则：院部代码_就诊类别代码_系统代码_病理报告单号"
+            raise serializers.ValidationError(message)
+        return value
+
+    def validate(self, attrs):
+        """其它逻辑校验"""
+        if attrs['ENCOUNTER_TYPE_CODE'] in (1, 2, 4) and attrs['OUTPATIENT_ID'] is None:
+            message = "当就诊类型为门急诊及体检时,门诊号->OUTPATIENT_ID 不能为空"
+            return serializers.ValidationError(message)
+        if attrs['ENCOUNTER_TYPE_CODE'] == 3 and attrs['INPATIENT_ID'] is None:
+            message = "当就诊类型为住院时时,住院号->INPATIENT_ID 不能为空"
+            return serializers.ValidationError(message)
+        return attrs
 
 
 class CDAValidateModelSerializer(serializers.ModelSerializer):
