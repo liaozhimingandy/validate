@@ -87,7 +87,7 @@ class BaseSerializer(serializers.Serializer):
     """公共部分"""
 
     EMPI_ID = serializers.CharField(max_length=32, label='患者主索引号码', help_text="患者主索引号码",
-                                    allow_blank=True, trim_whitespace=True)
+                                    allow_blank=True, trim_whitespace=True, allow_null=True)
     PK_PATIENT = serializers.CharField(max_length=64, trim_whitespace=True)
     ENCOUNTER_ID = serializers.CharField(max_length=64, trim_whitespace=True)
     ORG_CODE = serializers.CharField(max_length=18, allow_blank=True)
@@ -704,7 +704,7 @@ class ExamResultSerializer(BaseSerializer):
 
 class PathologyResultSerializer(BaseSerializer):
     VISIT_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
-                                                label='就诊日期时间', help_text='就诊日期时间')
+                                                label='就诊日期时间', help_text='就诊日期时间', allow_null=True)
     DEPT_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='科室ID', help_text='科室ID', allow_null=True)
     DEPT_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='科室名称', help_text='科室名称', allow_null=True)
     WARD_ID = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='病区ID',
@@ -720,15 +720,15 @@ class PathologyResultSerializer(BaseSerializer):
     PLACER_ORDER_NO = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='医嘱号',
                                             help_text='医嘱号')
     APPLY_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",), label='申请日期时间',
-                                            help_text='申请日期时间')
+                                            help_text='申请日期时间', allow_null=True)
     APPLY_DEPT_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='申请科室ID',
-                                          help_text='申请科室ID')
+                                          help_text='申请科室ID', allow_null=True)
     APPLY_DEPT_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='申请科室名称',
                                             help_text='申请科室名称')
-    APPLY_DOCTOR_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='申请医师ID', help_text='申请医师ID')
-    APPLY_DOCTOR_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='申请医师姓名', help_text='申请医师姓名')
+    APPLY_DOCTOR_ID = serializers.CharField(max_length=64, trim_whitespace=True, label='申请医师ID', help_text='申请医师ID', allow_null=True)
+    APPLY_DOCTOR_NAME = serializers.CharField(max_length=64, trim_whitespace=True, label='申请医师姓名', help_text='申请医师姓名', allow_null=True)
     DIAG_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",), label='诊断日期时间',
-                                           help_text='诊断日期时间')
+                                           help_text='诊断日期时间', allow_null=True)
     DIAG_CODE = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='疾病诊断编码',
                                       help_text='疾病诊断编码')
     DIAG_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='诊断名称',
@@ -772,7 +772,7 @@ class PathologyResultSerializer(BaseSerializer):
     REPORT_STATUS_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
                                                label='报告单状态名称', help_text='报告单状态名称')
     SURGERY_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",),
-                                              label='手术/操作日期时间', help_text='手术/操作日期时间')
+                                              label='手术/操作日期时间', help_text='手术/操作日期时间', allow_null=True)
     SURGERY_CODE = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='手术/操作代码',
                                          help_text='手术/操作代码')
     SURGERY_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='手术/操作名称',
@@ -792,7 +792,7 @@ class PathologyResultSerializer(BaseSerializer):
     PATHOLOGY_TYPE_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
                                                 label='病理类型名称', help_text='病理类型名称')
     FIRST_DIAG_DATE_TIME = serializers.DateTimeField(format=api_settings.TIME_FORMAT, input_formats=("%Y%m%dT%H%M%S",), label='初诊日期',
-                                                 help_text='初诊日期')
+                                                 help_text='初诊日期', allow_null=True)
     FIRST_DIAG_OPERA_ID = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True, label='初诊人ID',
                                                 help_text='初诊人ID')
     FIRST_DIAG_OPERA_NAME = serializers.CharField(max_length=64, trim_whitespace=True, allow_null=True,
